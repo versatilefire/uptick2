@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Asset Inspector">
+<title>Property Asset Inspector</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f4;
+    --bg3: #eeede9;
+    --bg-success: #eaf3de;
+    --bg-danger: #fcebeb;
+    --bg-warning: #faeeda;
+    --bg-info: #e6f1fb;
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #888780;
+    --text-success: #27500a;
+    --text-danger: #791f1f;
+    --text-warning: #633806;
+    --text-info: #0c447c;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --border-success: rgba(63,109,17,0.35);
+    --border-danger: rgba(163,45,45,0.35);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #252523;
+      --bg3: #2e2e2b;
+      --bg-success: #173404;
+      --bg-danger: #501313;
+      --bg-warning: #412402;
+      --bg-info: #042c53;
+      --text: #f0efeb;
+      --text2: #b4b2a9;
+      --text3: #888780;
+      --text-success: #c0dd97;
+      --text-danger: #f09595;
+      --text-warning: #fac775;
+      --text-info: #85b7eb;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+      --border-success: rgba(144,196,80,0.3);
+      --border-danger: rgba(240,149,149,0.3);
+    }
+  }
+
+  html, body { height: 100%; background: var(--bg3); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+
+  .app { max-width: 680px; margin: 0 auto; padding: 0 0 4rem; }
+
+  header { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 1rem 1.25rem; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 10px; }
+  header svg { color: var(--text); }
+  header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+
+  .tbar { display: flex; gap: 4px; background: var(--bg2); border-bottom: 0.5px solid var(--border); padding: 8px 1rem; }
+  .tb { flex: 1; padding: 7px 10px; border: none; background: none; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); transition: all .15s; font-family: var(--font); }
+  .tb.act { background: var(--bg); color: var(--text); border: 0.5px solid var(--border); }
+
+  .vw { display: none; padding: 1rem; }
+  .vw.act { display: block; }
+
+  .sec { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .sec-title { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+
+  .fg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ff { grid-column: 1 / -1; }
+
+  .fl { display: flex; flex-direction: column; gap: 4px; }
+  .fl label { font-size: 12px; color: var(--text2); }
+
+  input, select, textarea {
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: var(--font);
+    width: 100%;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--text3); }
+  textarea { resize: vertical; min-height: 60px; }
+  select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+
+  button { font-family: var(--font); cursor: pointer; }
+
+  .ac { background: var(--bg2); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 1rem; margin-bottom: .75rem; }
+  .ah { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .al { font-size: 13px; font-weight: 500; color: var(--text); }
+  .rb { background: none; border: none; color: var(--text2); font-size: 18px; padding: 2px 4px; border-radius: var(--radius); line-height: 1; transition: color .15s; }
+  .rb:hover { color: var(--text-danger); }
+
+  .pfr { display: flex; gap: 8px; }
+  .pfb { flex: 1; padding: 8px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--text2); transition: all .15s; font-family: var(--font); }
+  .pfb.pa { background: var(--bg-success); color: var(--text-success); border-color: var(--border-success); }
+  .pfb.fa { background: var(--bg-danger); color: var(--text-danger); border-color: var(--border-danger); }
+
+  .rmkw { margin-top: 8px; display: none; }
+  .rmkw.vis { display: block; }
+
+  .photo-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .photo-thumb { width: 52px; height: 52px; object-fit: cover; border-radius: var(--radius); border: 0.5px solid var(--border); cursor: pointer; }
+  .photo-add { width: 52px; height: 52px; border-radius: var(--radius); border: 0.5px dashed var(--border2); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 22px; }
+
+  .add-btn { width: 100%; padding: 9px; border-radius: var(--radius); border: 0.5px dashed var(--border2); background: transparent; cursor: pointer; font-size: 13px; color: var(--text2); display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: .5rem; transition: background .15s; font-family: var(--font); }
+  .add-btn:hover { background: var(--bg2); }
+
+  .sig-wrap canvas { border: 0.5px solid var(--border2); border-radius: var(--radius); display: block; cursor: crosshair; touch-action: none; width: 100%; height: 110px; background: var(--bg); }
+  .sig-actions { display: flex; gap: 6px; margin-top: 6px; }
+  .sig-actions button { font-size: 12px; padding: 5px 12px; background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); color: var(--text2); }
+  .sig-actions button:hover { background: var(--bg3); }
+
+  .sub-btn { width: 100%; padding: 11px; border-radius: var(--radius); border: none; background: var(--text); color: var(--bg); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: .5rem; transition: opacity .15s; font-family: var(--font); }
+  .sub-btn:hover { opacity: .85; }
+
+  .srch-row { display: flex; gap: 8px; margin-bottom: .75rem; }
+  .srch-row input, .srch-row select { flex: 1; }
+
+  .li { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; margin-bottom: .75rem; }
+  .lih { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .lp { font-size: 13px; font-weight: 500; color: var(--text); }
+  .bdg { font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+  .bpa { background: var(--bg-success); color: var(--text-success); }
+  .bfa { background: var(--bg-danger); color: var(--text-danger); }
+  .bmx { background: var(--bg-warning); color: var(--text-warning); }
+  .lm { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .lar { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--text2); padding: 4px 0; border-bottom: 0.5px solid var(--border); }
+  .lar:last-child { border-bottom: none; }
+  .lan { flex: 1; }
+  .lrk { color: var(--text2); font-style: italic; }
+  .li-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .li-actions button { font-size: 12px; padding: 5px 10px; background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--radius); color: var(--text2); display: flex; align-items: center; gap: 4px; }
+  .li-actions button:hover { background: var(--bg3); }
+  .li-actions .del-btn { color: var(--text-danger); }
+
+  .cbdg { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 999px; font-size: 11px; padding: 1px 6px; font-weight: 500; color: var(--text2); margin-left: 4px; }
+
+  .emp { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 13px; }
+  .emp-icon { font-size: 36px; margin-bottom: 8px; }
+
+  .photo-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+  .photo-overlay.open { display: flex; }
+  .photo-overlay img { max-width: 100%; max-height: 90vh; border-radius: var(--radius-lg); }
+  .photo-overlay .cls { position: absolute; top: 16px; right: 16px; background: rgba(0,0,0,.5); border: none; color: #fff; font-size: 22px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  @media (max-width: 480px) {
+    .fg { grid-template-columns: 1fr; }
+    .ff { grid-column: 1; }
+    header h1 { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <h1>Property Asset Inspector</h1>
+  </header>
+
+  <div class="tbar">
+    <button class="tb act" id="tab-log" onclick="switchTab('log')">
+      &#9998; Log inspection
+    </button>
+    <button class="tb" id="tab-history" onclick="switchTab('history')">
+      &#9776; History <span class="cbdg" id="hcnt">0</span>
+    </button>
+  </div>
+
+  <div class="vw act" id="vw-log">
+    <div class="sec">
+      <div class="sec-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg>
+        Property details
+      </div>
+      <div class="fg">
+        <div class="fl ff"><label>Property name / ID</label><input type="text" id="pn" placeholder="e.g. 12 Oak Street or LOT-004"></div>
+        <div class="fl"><label>Owner / client</label><input type="text" id="po" placeholder="Owner name"></div>
+        <div class="fl"><label>Inspection date</label><input type="date" id="pd"></div>
+        <div class="fl ff"><label>Address</label><input type="text" id="pa" placeholder="Street address"></div>
+        <div class="fl"><label>Inspector</label><input type="text" id="pi" placeholder="Inspector name"></div>
+        <div class="fl"><label>Reference no.</label><input type="text" id="pr" placeholder="e.g. INS-2026-001"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/></svg>
+        Assets
+      </div>
+      <div id="ac"></div>
+      <button class="add-btn" onclick="addAsset()">&#43; Add asset</button>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        Inspector sign-off
+      </div>
+      <div class="fl" style="margin-bottom:6px"><label>Draw your signature below</label></div>
+      <canvas id="sig-canvas" width="640" height="110" aria-label="Signature pad"></canvas>
+      <div class="sig-actions"><button onclick="clearSig()">&#10005; Clear signature</button></div>
+    </div>
+
+    <button class="sub-btn" onclick="saveInspection()">&#10003; Save inspection</button>
+  </div>
+
+  <div class="vw" id="vw-history">
+    <div class="srch-row">
+      <input type="search" id="srch" placeholder="Search property, owner, ref…" oninput="renderHistory()">
+      <select id="flt" onchange="renderHistory()">
+        <option value="">All statuses</option>
+        <option value="pass">All pass</option>
+        <option value="fail">Has failures</option>
+      </select>
+    </div>
+    <div id="ll">
+      <div class="emp"><div class="emp-icon">&#128203;</div>No inspections logged yet</div>
+    </div>
+  </div>
+</div>
+
+<div class="photo-overlay" id="photo-overlay" onclick="closePhoto()">
+  <button class="cls" onclick="closePhoto()" aria-label="Close">&#10005;</button>
+  <img id="photo-lg" src="" alt="Asset photo">
+</div>
+
+<script>
+var assetCount=0,inspections=[],sigDrawing=false,sigCtx,sigCanvas,lastX=0,lastY=0;
+
+function loadData(){
+  try{var d=localStorage.getItem('pai-v2');if(d){inspections=JSON.parse(d);document.getElementById('hcnt').textContent=inspections.length;}}catch(e){inspections=[];}
+}
+
+function saveData(){
+  try{localStorage.setItem('pai-v2',JSON.stringify(inspections));}catch(e){alert('Storage full — consider exporting and deleting old inspections.');}
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tb').forEach(function(t){t.classList.remove('act');});
+  document.querySelectorAll('.vw').forEach(function(v){v.classList.remove('act');});
+  document.getElementById('vw-'+tab).classList.add('act');
+  document.getElementById('tab-'+tab).classList.add('act');
+  if(tab==='history')renderHistory();
+}
+
+function addAsset(){
+  assetCount++;
+  var id='a'+assetCount;
+  var d=document.createElement('div');
+  d.className='ac';d.id=id;
+  d.innerHTML='<div class="ah"><span class="al">Asset '+assetCount+'</span><button class="rb" onclick="removeAsset(\''+id+'\')" aria-label="Remove asset">&#128465;</button></div>'+
+  '<div class="fg">'+
+  '<div class="fl"><label>Asset name / ID</label><input type="text" class="an" placeholder="e.g. Gate, Pump, Generator"></div>'+
+  '<div class="fl"><label>Location on property</label><input type="text" class="aloc" placeholder="e.g. North boundary"></div>'+
+  '<div class="fl"><label>Asset type</label><select class="at"><option value="">Select type…</option><option>Electrical</option><option>Mechanical</option><option>Structural</option><option>Plumbing</option><option>Safety</option><option>Security</option><option>Other</option></select></div>'+
+  '<div class="fl"><label>Status</label><div class="pfr"><button class="pfb" onclick="setSt(this,\''+id+'\',\'pass\')">&#10003; Pass</button><button class="pfb" onclick="setSt(this,\''+id+'\',\'fail\')">&#10007; Fail</button></div></div>'+
+  '</div>'+
+  '<div class="rmkw" id="rw-'+id+'"><div class="fl" style="margin-top:8px"><label>Remarks / failure notes</label><textarea class="ar" placeholder="Describe the issue or condition…"></textarea></div></div>'+
+  '<div class="fl" style="margin-top:10px"><label>Photos</label><div class="photo-row" id="pr-'+id+'"><button class="photo-add" onclick="triggerPhoto(\''+id+'\')" aria-label="Add photo">&#128247;</button></div><input type="file" id="pf-'+id+'" accept="image/*" multiple style="display:none" onchange="handlePhotos(this,\''+id+'\')"></div>';
+  document.getElementById('ac').appendChild(d);
+}
+
+function removeAsset(id){var e=document.getElementById(id);if(e)e.remove();}
+
+function setSt(btn,id,st){
+  var c=document.getElementById(id);
+  c.querySelectorAll('.pfb').forEach(function(b){b.classList.remove('pa','fa');});
+  btn.classList.add(st==='pass'?'pa':'fa');
+  var rw=document.getElementById('rw-'+id);
+  if(st==='fail'){rw.classList.add('vis');}else{rw.classList.remove('vis');}
+  c.dataset.status=st;
+}
+
+function triggerPhoto(id){document.getElementById('pf-'+id).click();}
+
+function handlePhotos(inp,id){
+  var row=document.getElementById('pr-'+id);
+  Array.from(inp.files).forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(e){
+      var img=document.createElement('img');
+      img.className='photo-thumb';img.src=e.target.result;img.alt='Asset photo';
+      img.onclick=function(){openPhoto(e.target.result);};
+      row.insertBefore(img,row.lastElementChild);
+    };
+    r.readAsDataURL(f);
+  });
+  inp.value='';
+}
+
+function openPhoto(src){document.getElementById('photo-lg').src=src;document.getElementById('photo-overlay').classList.add('open');}
+function closePhoto(){document.getElementById('photo-overlay').classList.remove('open');}
+
+function initSig(){
+  sigCanvas=document.getElementById('sig-canvas');
+  sigCtx=sigCanvas.getContext('2d');
+  sigCtx.lineWidth=1.8;sigCtx.lineCap='round';sigCtx.lineJoin='round';
+  function pos(e){var r=sigCanvas.getBoundingClientRect(),sx=sigCanvas.width/r.width,sy=sigCanvas.height/r.height,cx=e.touches?e.touches[0].clientX:e.clientX,cy=e.touches?e.touches[0].clientY:e.clientY;return{x:(cx-r.left)*sx,y:(cy-r.top)*sy};}
+  sigCanvas.addEventListener('mousedown',function(e){sigDrawing=true;var p=pos(e);lastX=p.x;lastY=p.y;});
+  sigCanvas.addEventListener('mousemove',function(e){if(!sigDrawing)return;var p=pos(e);sigCtx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('color')||'#000';sigCtx.beginPath();sigCtx.moveTo(lastX,lastY);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();lastX=p.x;lastY=p.y;});
+  sigCanvas.addEventListener('mouseup',function(){sigDrawing=false;});
+  sigCanvas.addEventListener('mouseleave',function(){sigDrawing=false;});
+  sigCanvas.addEventListener('touchstart',function(e){e.preventDefault();sigDrawing=true;var p=pos(e);lastX=p.x;lastY=p.y;},{passive:false});
+  sigCanvas.addEventListener('touchmove',function(e){e.preventDefault();if(!sigDrawing)return;var p=pos(e);sigCtx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('color')||'#000';sigCtx.beginPath();sigCtx.moveTo(lastX,lastY);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();lastX=p.x;lastY=p.y;},{passive:false});
+  sigCanvas.addEventListener('touchend',function(){sigDrawing=false;});
+}
+
+function clearSig(){if(sigCtx)sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);}
+
+function getSigData(){
+  if(!sigCanvas)return null;
+  var blank=document.createElement('canvas');blank.width=sigCanvas.width;blank.height=sigCanvas.height;
+  return sigCanvas.toDataURL()===blank.toDataURL()?null:sigCanvas.toDataURL();
+}
+
+function saveInspection(){
+  var propName=document.getElementById('pn').value.trim();
+  if(!propName){alert('Please enter a property name or ID.');return;}
+  var cards=document.querySelectorAll('.ac');
+  if(!cards.length){alert('Please add at least one asset.');return;}
+  var assets=[],allOk=true;
+  cards.forEach(function(c){
+    var st=c.dataset.status||'';
+    if(!st)allOk=false;
+    var photos=[];
+    c.querySelectorAll('.photo-thumb').forEach(function(img){photos.push(img.src);});
+    assets.push({name:c.querySelector('.an').value.trim()||'Unnamed',location:c.querySelector('.aloc').value.trim(),type:c.querySelector('.at').value,status:st,remarks:c.querySelector('.ar').value.trim(),photos:photos});
+  });
+  if(!allOk){alert('Please set a pass/fail status for all assets.');return;}
+  var ins={id:Date.now(),propName:propName,owner:document.getElementById('po').value.trim(),date:document.getElementById('pd').value,address:document.getElementById('pa').value.trim(),inspector:document.getElementById('pi').value.trim(),ref:document.getElementById('pr').value.trim(),assets:assets,sig:getSigData(),savedAt:new Date().toLocaleString()};
+  inspections.unshift(ins);
+  saveData();
+  document.getElementById('hcnt').textContent=inspections.length;
+  ['pn','po','pa','pi','pr'].forEach(function(i){document.getElementById(i).value='';});
+  document.getElementById('pd').valueAsDate=new Date();
+  document.getElementById('ac').innerHTML='';
+  assetCount=0;
+  clearSig();
+  addAsset();
+  switchTab('history');
+}
+
+function renderHistory(){
+  var q=(document.getElementById('srch').value||'').toLowerCase();
+  var flt=document.getElementById('flt').value;
+  var list=document.getElementById('ll');
+  var data=inspections.filter(function(ins){
+    var txt=(ins.propName+ins.owner+ins.ref+ins.address+ins.inspector).toLowerCase();
+    if(q&&!txt.includes(q))return false;
+    if(flt==='pass'&&ins.assets.some(function(a){return a.status==='fail';}))return false;
+    if(flt==='fail'&&!ins.assets.some(function(a){return a.status==='fail';}))return false;
+    return true;
+  });
+  if(!data.length){list.innerHTML='<div class="emp"><div class="emp-icon">&#128269;</div>No matching inspections</div>';return;}
+  list.innerHTML=data.map(function(ins){
+    var passes=ins.assets.filter(function(a){return a.status==='pass';}).length;
+    var fails=ins.assets.filter(function(a){return a.status==='fail';}).length;
+    var bc=fails===0?'bpa':passes===0?'bfa':'bmx';
+    var bl=fails===0?'All pass':passes===0?'All fail':passes+' pass / '+fails+' fail';
+    var rows=ins.assets.map(function(a){
+      return '<div class="lar"><span class="lan">'+a.name+(a.location?' &middot; <em>'+a.location+'</em>':'')+(a.type?' &middot; '+a.type:'')+'</span><span class="bdg '+(a.status==='pass'?'bpa':'bfa')+'">'+a.status+'</span>'+(a.remarks?'<span class="lrk">&mdash; '+a.remarks+'</span>':'')+'</div>';
+    }).join('');
+    var photos=ins.assets.flatMap(function(a){return a.photos||[];});
+    var photoHtml=photos.length?'<div class="photo-row" style="margin-top:8px">'+photos.map(function(s){return '<img class="photo-thumb" src="'+s+'" alt="Asset photo" onclick="openPhoto(\''+s+'\')">';}).join('')+'</div>':'';
+    var sigHtml=ins.sig?'<div style="margin-top:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:3px">Signature</div><img src="'+ins.sig+'" style="height:44px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg)" alt="Inspector signature"></div>':'';
+    return '<div class="li"><div class="lih"><span class="lp">'+ins.propName+'</span><span class="bdg '+bc+'">'+bl+'</span></div><div class="lm">'+(ins.ref?ins.ref+' &middot; ':'')+( ins.date||'No date')+(ins.inspector?' &middot; '+ins.inspector:'')+(ins.address?' &middot; '+ins.address:'')+'</div><div>'+rows+'</div>'+photoHtml+sigHtml+'<div class="li-actions"><button onclick="exportPDF('+ins.id+')">&#128196; PDF</button><button onclick="exportCSV('+ins.id+')">&#128202; CSV</button><button class="del-btn" onclick="deleteIns('+ins.id+')">&#128465; Delete</button></div></div>';
+  }).join('');
+}
+
+function deleteIns(id){
+  if(!confirm('Delete this inspection?'))return;
+  inspections=inspections.filter(function(i){return i.id!==id;});
+  saveData();
+  document.getElementById('hcnt').textContent=inspections.length;
+  renderHistory();
+}
+
+function exportCSV(id){
+  var ins=inspections.find(function(i){return i.id===id;});
+  if(!ins)return;
+  var rows=[['Property','Owner','Date','Address','Inspector','Ref','Asset','Location','Type','Status','Remarks']];
+  ins.assets.forEach(function(a){rows.push([ins.propName,ins.owner,ins.date,ins.address,ins.inspector,ins.ref,a.name,a.location,a.type,a.status,a.remarks]);});
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob([csv],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='inspection-'+ins.propName.replace(/\s+/g,'-')+'.csv';a.click();
+}
+
+function exportPDF(id){
+  var ins=inspections.find(function(i){return i.id===id;});
+  if(!ins)return;
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({unit:'mm',format:'a4'});
+  var W=210,margin=18,lw=W-margin*2,y=margin;
+  doc.setFontSize(20);doc.setFont('helvetica','bold');doc.setTextColor(20,20,18);
+  doc.text('Property Inspection Report',margin,y);y+=9;
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(120);
+  doc.text('Generated: '+new Date().toLocaleString(),margin,y);y+=8;
+  doc.setDrawColor(210);doc.line(margin,y,W-margin,y);y+=7;
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(20);doc.text('Property Details',margin,y);y+=6;
+  var fields=[['Property',ins.propName],['Owner',ins.owner],['Address',ins.address],['Date',ins.date],['Inspector',ins.inspector],['Reference',ins.ref]];
+  fields.forEach(function(f){if(f[1]){doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(100);doc.text(f[0]+':',margin,y);doc.setFont('helvetica','normal');doc.setTextColor(20);doc.text(f[1],margin+30,y);y+=5;}});
+  y+=4;doc.line(margin,y,W-margin,y);y+=7;
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(20);doc.text('Assets',margin,y);y+=6;
+  ins.assets.forEach(function(a,i){
+    if(y>265){doc.addPage();y=margin;}
+    doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(20);
+    doc.text((i+1)+'. '+a.name,margin,y);
+    if(a.status==='pass'){doc.setTextColor(39,80,10);}else{doc.setTextColor(121,31,31);}
+    doc.text(a.status.toUpperCase(),W-margin,y,{align:'right'});
+    doc.setTextColor(20);y+=5;
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(90);
+    if(a.location){doc.text('Location: '+a.location,margin+4,y);y+=4;}
+    if(a.type){doc.text('Type: '+a.type,margin+4,y);y+=4;}
+    if(a.remarks){var lines=doc.splitTextToSize('Remarks: '+a.remarks,lw-8);doc.setTextColor(163,45,45);lines.forEach(function(l){doc.text(l,margin+4,y);y+=4;});doc.setTextColor(20);}
+    y+=3;
+  });
+  if(ins.sig){
+    if(y>250){doc.addPage();y=margin;}
+    y+=4;doc.line(margin,y,W-margin,y);y+=6;
+    doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(20);doc.text('Inspector Signature',margin,y);y+=6;
+    try{doc.addImage(ins.sig,'PNG',margin,y,70,24);}catch(e){}
+    y+=28;
+  }
+  doc.save('inspection-'+ins.propName.replace(/\s+/g,'-')+'.pdf');
+}
+
+document.getElementById('pd').valueAsDate=new Date();
+addAsset();
+initSig();
+loadData();
+</script>
+</body>
+</html>
